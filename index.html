@@ -1,147 +1,236 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
-
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>油耗记录助手</title>
-    <link href="./bootstrap.min.css" rel="stylesheet">
-    <style>
-        body {
-            background-color: #f8f9fa;
-            padding-top: 20px;
-        }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>油耗记录助手</title>
+  <link href="./bootstrap.min.css" rel="stylesheet">
+  <style>
+      body {
+          background-color: #f8f9fa;
+          padding-top: 20px;
+      }
 
-        .record-card {
-            margin-bottom: 15px;
-        }
-    </style>
+      .record-card {
+          margin-bottom: 12px;
+          border-left: 5px solid #0d6efd;
+      }
+
+      .analysis-text {
+          font-size: 0.85rem;
+          font-weight: bold;
+      }
+  </style>
 </head>
-
 <body>
 
-    <div class="container">
-        <h2 class="text-center mb-4">🚗 油耗记录助手</h2>
+<div class="container">
+  <h2 class="text-center mb-4">🚗 油耗记录助手</h2>
 
-        <!-- 配置区域（仅首次需配置） -->
-        <div class="card mb-4">
-            <div class="card-body">
-                <h6>配置 GitHub 存储</h6>
-                <input type="password" id="token" class="form-control mb-2" placeholder="GitHub Token (classic)">
-                <input type="text" id="repo" class="form-control mb-2" placeholder="用户名/仓库名 (如: user/gas-data)">
-                <button class="btn btn-sm btn-secondary w-100" onclick="saveConfig()">保存配置</button>
-            </div>
+  <!-- 配置区域 -->
+  <div class="card mb-4 border-0 shadow-sm">
+    <div class="card-body">
+      <h6 class="card-title">⚙️ 配置</h6>
+      <div class="row g-2">
+        <div class="col-8">
+          <input type="password" id="token" class="form-control form-control-sm" placeholder="GitHub Token">
         </div>
-
-        <!-- 表单区域 -->
-        <div class="card mb-4 shadow-sm">
-            <div class="card-body">
-                <div class="row g-3">
-                    <div class="col-6">
-                        <label class="form-label">油价 (元/L)</label>
-                        <input type="number" id="price" class="form-control" step="0.01">
-                    </div>
-                    <div class="col-6">
-                        <label class="form-label">加油量 (L)</label>
-                        <input type="number" id="liters" class="form-control" step="0.01">
-                    </div>
-                    <div class="col-6">
-                        <label class="form-label">当前里程 (km)</label>
-                        <input type="number" id="mileage" class="form-control">
-                    </div>
-                    <div class="col-6">
-                        <label class="form-label">日期</label>
-                        <input type="date" id="date" class="form-control">
-                    </div>
-                    <button class="btn btn-primary w-100 mt-3" onclick="addRecord()">提交记录</button>
-                </div>
-            </div>
+        <div class="col-4">
+          <input type="text" id="repo" class="form-control form-control-sm" placeholder="user/repo">
         </div>
-
-        <!-- 列表区域 -->
-        <div id="recordList">
-            <div class="text-center">正在加载数据...</div>
-        </div>
+        <button class="btn btn-sm btn-secondary w-100 mt-2" onclick="saveConfig()">保存并刷新数据</button>
+      </div>
     </div>
+  </div>
 
-    <script>
-        // 核心逻辑：使用 GitHub API 读写文件
-        const GITHUB_API = "https://github.com";
-        let config = JSON.parse(localStorage.getItem('gas_config') || '{}');
+  <!-- 表单区域 -->
+  <div class="card mb-4 shadow-sm">
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-6">
+          <label class="form-label">总花费 (元)</label>
+          <input oninput="calcLiters()" type="number" id="cost" class="form-control" step="0.01">
+        </div>
+        <div class="col-6">
+          <label class="form-label">优惠 (元)</label>
+          <input oninput="calcLiters()" type="number" id="discount" class="form-control" step="0.01">
+        </div>
+        <div class="col-6">
+          <label class="form-label">油价 (元/L)</label>
+          <input oninput="calcLiters()" type="number" id="price" class="form-control" step="0.01">
+        </div>
+        <div class="col-6">
+          <label class="form-label">加油量 (L)</label>
+          <input type="number" id="liters" class="form-control" step="0.01" placeholder="例: 33">
+        </div>
+        <div class="col-4">
+          <label class="form-label">当前里程 (km)</label>
+          <input type="number" id="mileage" class="form-control" placeholder="例: 40371">
+        </div>
+        <div class="col-8">
+          <label class="form-label">日期</label>
+          <input type="text" id="date" class="form-control">
+        </div>
+        <button class="btn btn-primary w-100 mt-3" onclick="addRecord()">➕ 提交本次加油</button>
+      </div>
+    </div>
+  </div>
 
-        function saveConfig() {
-            const token = document.getElementById('token').value;
-            const repo = document.getElementById('repo').value;
-            config = { token, repo };
-            localStorage.setItem('gas_config', JSON.stringify(config));
-            loadRecords();
-        }
+  <div id="recordList">
+    <div class="text-center text-muted">正在连接仓库...</div>
+  </div>
+</div>
+<script src="./dayjs.min.js"></script>
+<script>
+  const GITHUB_API = "https://api.github.com/repos";
+  let config = JSON.parse(localStorage.getItem('gas_config') || '{}');
+  const initLiter = 33
+  const initMileage = 40371
 
-        async function fetchRepoFile() {
-            const url = `${GITHUB_API}/${config.repo}/contents/data.json`;
-            const res = await fetch(url, {
-                headers: { "Authorization": `token ${config.token}` }
-            });
-            if (res.status === 404) return { content: [], sha: null };
-            const data = await res.json();
-            return {
-                content: JSON.parse(decodeURIComponent(escape(atob(data.content)))),
-                sha: data.sha
-            };
-        }
+  // 初始化日期为今天
+  document.getElementById('date').value = dayjs().format('YYYY-MM-DD HH:mm:ss');
+  document.getElementById('discount').value = 0;
+  document.getElementById('mileage').value = initMileage;
 
-        async function addRecord() {
-            const record = {
-                id: Date.now(),
-                price: document.getElementById('price').value,
-                liters: document.getElementById('liters').value,
-                mileage: document.getElementById('mileage').value,
-                date: document.getElementById('date').value
-            };
+  function saveConfig() {
+    config.token = document.getElementById('token').value;
+    config.repo = document.getElementById('repo').value;
+    localStorage.setItem('gas_config', JSON.stringify(config));
+    loadRecords();
+  }
 
-            const { content, sha } = await fetchRepoFile();
-            content.push(record);
+  async function fetchRepoFile() {
+    const url = `${GITHUB_API}/${config.repo}/contents/data.json`;
+    const res = await fetch(url, {
+      headers: {
+        "Authorization": `token ${config.token}`,
+        "Accept": "application/vnd.github.v3+json"
+      }
+    });
+    if (res.status === 404) return {content: [], sha: null};
+    if (!res.ok) throw new Error("获取数据失败，请检查配置");
+    const data = await res.json();
+    const content = JSON.parse(decodeURIComponent(escape(atob(data.content))));
+    return {content, sha: data.sha};
+  }
 
-            await updateRepoFile(content, sha);
-            loadRecords();
-        }
+  function calcLiters() {
+    const price = parseFloat(document.getElementById('price').value);
+    const cost = parseFloat(document.getElementById('cost').value);
 
-        async function updateRepoFile(newContent, sha) {
-            const url = `${GITHUB_API}/${config.repo}/contents/data.json`;
-            await fetch(url, {
-                method: "PUT",
-                headers: {
-                    "Authorization": `token ${config.token}`,
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
-                    message: "update records",
-                    content: btoa(unescape(encodeURIComponent(JSON.stringify(newContent)))),
-                    sha: sha
-                })
-            });
-        }
+    const liters = cost / price
+    document.getElementById('liters').value = liters.toFixed(2)
+  }
 
-        async function loadRecords() {
-            if (!config.token || !config.repo) return;
-            const { content } = await fetchRepoFile();
-            const html = content.reverse().map(r => `
-            <div class="card record-card shadow-sm">
-                <div class="card-body py-2">
-                    <div class="d-flex justify-content-between">
-                        <strong>${r.date}</strong>
-                        <span class="text-danger">¥${(r.price * r.liters).toFixed(2)}</span>
+  async function addRecord() {
+    const price = parseFloat(document.getElementById('price').value);
+    const cost = parseFloat(document.getElementById('cost').value);
+    const discount = parseFloat(document.getElementById('discount').value);
+    const liters = parseFloat(document.getElementById('liters').value);
+    const mileage = parseInt(document.getElementById('mileage').value);
+    const date = document.getElementById('date').value;
+
+    if (!cost || !price || !liters || !mileage) return alert("请完整填写记录");
+
+    const record = {id: Date.now(), cost, discount, price, liters, mileage, date};
+    console.log('record', record)
+    try {
+      const {content, sha} = await fetchRepoFile();
+      content.push(record);
+      await updateRepoFile(content, sha);
+      alert("同步成功！");
+      loadRecords();
+    } catch (e) {
+      alert(e.message);
+    }
+  }
+
+  async function updateRepoFile(newContent, sha) {
+    const url = `${GITHUB_API}/${config.repo}/contents/data.json`;
+    await fetch(url, {
+      method: "PUT",
+      headers: {
+        "Authorization": `token ${config.token}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        message: "gas record update",
+        content: btoa(unescape(encodeURIComponent(JSON.stringify(newContent)))),
+        sha: sha
+      })
+    });
+  }
+
+  async function deleteRecord(id) {
+    if (!confirm("确定删除？")) return;
+    const {content, sha} = await fetchRepoFile();
+    const filtered = content.filter(r => r.id !== id);
+    await updateRepoFile(filtered, sha);
+    loadRecords();
+  }
+
+  async function loadRecords(firstLoad) {
+    if (!config.token || !config.repo) {
+      document.getElementById('recordList').innerHTML = "请先配置 GitHub Token 和仓库";
+      return;
+    }
+
+    try {
+      const {content} = await fetchRepoFile();
+      // 按里程从低到高排序以计算油耗
+      const sorted = content.sort((a, b) => b.mileage - a.mileage);
+      if (firstLoad && sorted[0]) {
+        document.getElementById('price').value = sorted[0].price
+        document.getElementById('mileage').value = sorted[0].mileage
+      }
+      let analysis = "";
+
+      if (sorted.length > 0) {
+        const diffKm = sorted[0].mileage - initMileage;
+        const totalLiters = sorted.reduce((result, current) => result + current.liters, initLiter) - sorted[0].liters
+        const totalCost = sorted.reduce((result, current) => result + current.cost, initLiter * 8) - sorted[0].cost
+        const lPer100 = ((totalLiters / diffKm) * 100).toFixed(2);
+        const costPerKm = (totalCost / diffKm).toFixed(2);
+        console.log(diffKm, totalLiters, lPer100, totalCost)
+        analysis = `
+                        <div class="mt-2 pt-2 border-top d-flex justify-content-between text-primary analysis-text">
+                            <span>⛽ ${lPer100} L/100km</span>
+                            <span>💰 ¥${costPerKm} / km</span>
+                        </div>`;
+      }
+
+      const html = sorted.slice().map((r, i) => {
+        return `
+                <div class="card record-card shadow-sm">
+                    <div class="card-body py-2">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="text-muted small">${r.date}</span>
+                            <button class="btn btn-sm text-danger" onclick="deleteRecord(${r.id})">删除</button>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-end">
+                            <div>
+                                <span class="h4 mb-0">¥${r.cost.toFixed(2)}</span>
+                                <small class="ms-2 text-muted">${r.liters}L · ${r.mileage}km</small>
+                            </div>
+                            <span class="badge bg-light text-dark border">¥${r.price}/L</span>
+                        </div>
+                        ${i === 0 ? analysis : ''}
                     </div>
-                    <small class="text-muted">${r.mileage} km | ${r.liters} L | ¥${r.price}/L</small>
-                </div>
-            </div>
-        `).join('');
-            document.getElementById('recordList').innerHTML = html;
-        }
+                </div>`;
+      }).join('');
 
-        // 初始化加载
-        if (config.token) loadRecords();
-    </script>
+      document.getElementById('recordList').innerHTML = html || "暂无记录，请添加第一条记录";
+    } catch (e) {
+      document.getElementById('recordList').innerHTML = `<div class="text-danger">${e.message}</div>`;
+    }
+  }
+
+  if (config.token) {
+    document.getElementById('token').value = config.token;
+    document.getElementById('repo').value = config.repo;
+    loadRecords(true);
+  }
+
+</script>
 </body>
-
 </html>
