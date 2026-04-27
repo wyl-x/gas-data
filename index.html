@@ -41,6 +41,12 @@
         <div class="col-4">
           <input type="text" id="repo" class="form-control form-control-sm" placeholder="user/repo">
         </div>
+        <div class="col-6">
+          <input type="number" id="initLiter" class="form-control form-control-sm" placeholder="初始油量(L)">
+        </div>
+        <div class="col-6">
+          <input type="number" id="initMileage" class="form-control form-control-sm" placeholder="初始里程(km)">
+        </div>
         <button class="btn btn-sm btn-secondary w-100 mt-2" onclick="saveConfig()">保存并刷新数据</button>
       </div>
     </div>
@@ -87,8 +93,10 @@
 <script>
   const GITHUB_API = "https://api.github.com/repos";
   let config = JSON.parse(localStorage.getItem('gas_config') || '{}');
-  const initLiter = 33
-  const initMileage = 40371
+  const defaultInitLiter = 33;
+  const defaultInitMileage = 40371;
+  let initLiter = config.initLiter ?? defaultInitLiter;
+  let initMileage = config.initMileage ?? defaultInitMileage;
 
   // 初始化日期为今天
   document.getElementById('date').value = dayjs().format('YYYY-MM-DD HH:mm:ss');
@@ -98,7 +106,11 @@
   function saveConfig() {
     config.token = document.getElementById('token').value;
     config.repo = document.getElementById('repo').value;
+    config.initLiter = parseFloat(document.getElementById('initLiter').value) || defaultInitLiter;
+    config.initMileage = parseInt(document.getElementById('initMileage').value) || defaultInitMileage;
     localStorage.setItem('gas_config', JSON.stringify(config));
+    initLiter = config.initLiter;
+    initMileage = config.initMileage;
     loadRecords();
   }
 
@@ -231,6 +243,8 @@
   if (config.token) {
     document.getElementById('token').value = config.token;
     document.getElementById('repo').value = config.repo;
+    document.getElementById('initLiter').value = config.initLiter || defaultInitLiter;
+    document.getElementById('initMileage').value = config.initMileage || defaultInitMileage;
     loadRecords(true);
   }
 
