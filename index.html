@@ -203,7 +203,7 @@
       if (sorted.length > 0) {
         const diffKm = sorted[0].mileage - initMileage;
         const totalLiters = sorted.reduce((result, current) => result + current.liters, initLiter) - sorted[0].liters
-        const totalCost = sorted.reduce((result, current) => result + current.cost, initLiter * 8) - sorted[0].cost
+        const totalCost = sorted.reduce((result, current) => result + current.cost, initLiter * sorted[0].price) - sorted[0].cost
         const lPer100 = ((totalLiters / diffKm) * 100).toFixed(2);
         const costPerKm = (totalCost / diffKm).toFixed(2);
         console.log(diffKm, totalLiters, lPer100, totalCost)
