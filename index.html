@@ -211,11 +211,15 @@
         console.log(diffKm, totalLiters, lPer100, totalCost)
         analysis = `
                         <div class="mt-2 pt-2 border-top d-flex justify-content-between text-primary analysis-text">
-                            <span>⛽ ${totalLiters} km</span>
-                            <span>💰 ${totalCost} ¥</span>
+                            <span>🚗 ${diffKm} km</span>
+                            <span>⛽ ${totalLiters.toFixed(0)} L</span>
+                            <span>💰 ${totalCost.toFixed(0)} ¥</span>
+                        </div>
+                        <div class="mt-2 pt-2 border-top d-flex justify-content-between text-primary analysis-text">
                             <span>⛽ ${lPer100} L/100km</span>
                             <span>💰 ¥${costPerKm} / km</span>
-                        </div>`;
+                        </div>
+`;
       }
 
       const html = sorted.slice().map((r, i) => {
