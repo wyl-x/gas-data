@@ -93,8 +93,8 @@
 <script>
   const GITHUB_API = "https://api.github.com/repos";
   let config = JSON.parse(localStorage.getItem('gas_config') || '{}');
-  const defaultInitLiter = 16;
-  const defaultInitMileage = 40602;
+  const defaultInitLiter = 33;
+  const defaultInitMileage = 40371;
   let initLiter = config.initLiter ?? defaultInitLiter;
   let initMileage = config.initMileage ?? defaultInitMileage;
 
@@ -203,12 +203,16 @@
       if (sorted.length > 0) {
         const diffKm = sorted[0].mileage - initMileage;
         const totalLiters = sorted.reduce((result, current) => result + current.liters, initLiter) - sorted[0].liters
-        const totalCost = sorted.reduce((result, current) => result + current.cost, initLiter * sorted[0].price) - sorted[0].cost
+
+        const lastOne = sorted[sorted.length - 1]
+        const totalCost = sorted.reduce((result, current) => result + current.cost, initLiter * lastOne.price) - sorted[0].cost
         const lPer100 = ((totalLiters / diffKm) * 100).toFixed(2);
         const costPerKm = (totalCost / diffKm).toFixed(2);
         console.log(diffKm, totalLiters, lPer100, totalCost)
         analysis = `
                         <div class="mt-2 pt-2 border-top d-flex justify-content-between text-primary analysis-text">
+                            <span>⛽ ${totalLiters} km</span>
+                            <span>💰 ${totalCost} ¥</span>
                             <span>⛽ ${lPer100} L/100km</span>
                             <span>💰 ¥${costPerKm} / km</span>
                         </div>`;
