@@ -28,8 +28,6 @@
 <body>
 
 <div class="container">
-  <h2 class="text-center mb-4">🚗 油耗记录助手</h2>
-
   <!-- 配置区域 -->
   <div class="card mb-4 border-0 shadow-sm">
     <div class="card-body">
@@ -93,7 +91,7 @@
 <script>
   const GITHUB_API = "https://api.github.com/repos";
   let config = JSON.parse(localStorage.getItem('gas_config') || '{}');
-  const defaultInitLiter = 23;
+  const defaultInitLiter = 33;
   const defaultInitMileage = 40371;
   let initLiter = config.initLiter ?? defaultInitLiter;
   let initMileage = config.initMileage ?? defaultInitMileage;
@@ -203,6 +201,7 @@
       if (sorted.length > 0) {
         const diffKm = sorted[0].mileage - initMileage;
         const totalLiters = sorted.reduce((result, current) => result + current.liters, initLiter) - sorted[0].liters
+        const totalDiscount = sorted.reduce((result, current) => result + current.discount, 0)
 
         const lastOne = sorted[sorted.length - 1]
         const totalCost = sorted.reduce((result, current) => result + current.cost, initLiter * lastOne.price) - sorted[0].cost
@@ -218,6 +217,7 @@
                         <div class="mt-2 pt-2 border-top d-flex justify-content-between text-primary analysis-text">
                             <span>⛽ ${lPer100} L/100km</span>
                             <span>💰 ¥${costPerKm} / km</span>
+                            <span>⚡️ ¥${totalDiscount}</span>
                         </div>
 `;
       }
@@ -233,7 +233,7 @@
                         <div class="d-flex justify-content-between align-items-end">
                             <div>
                                 <span class="h4 mb-0">¥${r.cost.toFixed(2)}</span>
-                                <small class="ms-2 text-muted">${r.liters}L · ${r.mileage}km</small>
+                                <small class="ms-2 text-muted">${r.liters}L · ${r.mileage}km · -¥${r.discount}</small>
                             </div>
                             <span class="badge bg-light text-dark border">¥${r.price}/L</span>
                         </div>
